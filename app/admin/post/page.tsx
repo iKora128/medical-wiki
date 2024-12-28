@@ -6,16 +6,16 @@ import { Footer } from "../../../components/Footer"
 import ReactMarkdown from "react-markdown"
 
 export default function AdminPost() {
-  const [title, setTitle] = useState("''")
-  const [content, setContent] = useState("''")
+  const [title, setTitle] = useState("")
+  const [content, setContent] = useState("")
   const [preview, setPreview] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     // ここで記事をサーバーに送信する処理を実装します
-    console.log("'Title:'", title)
-    console.log("'Content:'", content)
-    alert("'記事が投稿されました。'")
+    console.log("Title:", title)
+    console.log("Content:", content)
+    alert("記事が投稿されました。")
   }
 
   return (
@@ -62,7 +62,7 @@ export default function AdminPost() {
               onClick={() => setPreview(!preview)}
               className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             >
-              {preview ? "'プレビューを閉じる'" : "'プレビュー'"}
+              {preview ? "プレビューを閉じる" : "プレビュー"}
             </button>
           </div>
         </form>

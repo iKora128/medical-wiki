@@ -1,4 +1,4 @@
-"'use client'"
+"use client"
 
 import { useState } from "react"
 import { Header } from "../../components/Header"
@@ -6,18 +6,18 @@ import { Footer } from "../../components/Footer"
 
 const quizQuestions = [
   {
-    question: "'正常な血圧の上限値は？'",
-    options: ["'120/80 mmHg'", "'130/85 mmHg'", "'140/90 mmHg'", "'150/95 mmHg'"],
+    question: "正常な血圧の上限値は？",
+    options: ["120/80 mmHg", "130/85 mmHg", "140/90 mmHg", "150/95 mmHg"],
     correctAnswer: 0,
   },
   {
-    question: "'以下のうち、糖尿病の症状ではないものは？'",
-    options: ["'多尿'", "'多飲'", "'多食'", "'発熱'"],
+    question: "以下のうち、糖尿病の症状ではないものは？",
+    options: ["多尿", "多飲", "多食", "発熱"],
     correctAnswer: 3,
   },
   {
-    question: "'心臓の左心室から出る大きな動脈の名前は？'",
-    options: ["'大動脈'", "'肺動脈'", "'冠状動脈'", "'頸動脈'"],
+    question: "心臓の左心室から出る大きな動脈の名前は？",
+    options: ["大動脈", "肺動脈", "冠状動脈", "頸動脈"],
     correctAnswer: 0,
   },
 ]

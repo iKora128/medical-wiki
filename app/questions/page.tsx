@@ -1,4 +1,4 @@
-"'use client'"
+"use client"
 
 import { useState } from "react"
 import { Header } from "../../components/Header"
@@ -6,11 +6,11 @@ import { Footer } from "../../components/Footer"
 
 export default function Questions() {
   const [questions, setQuestions] = useState([
-    { id: 1, title: "'高血圧の予防法について教えてください'", answers: 3 },
-    { id: 2, title: "'糖尿病の初期症状は何ですか？'", answers: 2 },
-    { id: 3, title: "'風邪と新型コロナウイルスの症状の違いは？'", answers: 5 },
+    { id: 1, title: "高血圧の予防法について教えてください", answers: 3 },
+    { id: 2, title: "糖尿病の初期症状は何ですか？", answers: 2 },
+    { id: 3, title: "風邪と新型コロナウイルスの症状の違いは？", answers: 5 },
   ])
-  const [newQuestion, setNewQuestion] = useState("''")
+  const [newQuestion, setNewQuestion] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -19,7 +19,7 @@ export default function Questions() {
         { id: questions.length + 1, title: newQuestion, answers: 0 },
         ...questions,
       ])
-      setNewQuestion("''")
+      setNewQuestion("")
     }
   }
 

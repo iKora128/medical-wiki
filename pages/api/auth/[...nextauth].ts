@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next"
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 
-const allowedIPs = process.env.ALLOWED_IPS?.split("','") || []
+const allowedIPs = process.env.ALLOWED_IPS?.split(",") || []
 
 declare module "next-auth" {
   interface Session {
@@ -19,30 +19,30 @@ declare module "next-auth" {
 }
 
 export default async function auth(req: NextApiRequest, res: NextApiResponse) {
-  const userIP = req.headers["'x-forwarded-for'"] || req.socket.remoteAddress
+  const userIP = req.headers["x-forwarded-for"] || req.socket.remoteAddress
 
   if (!allowedIPs.includes(userIP as string)) {
-    res.status(403).json({ error: "'Access denied'" })
+    res.status(403).json({ error: "Access denied" })
     return
   }
 
   return await NextAuth(req, res, {
     providers: [
       CredentialsProvider({
-        name: "'Credentials'",
+        name: "Credentials",
         credentials: {
           password: { label: "Password", type: "password" }
         },
         async authorize(credentials) {
           if (credentials?.password === process.env.ADMIN_PASSWORD) {
-            return { id: "'1'", name: "'Admin'" }
+            return { id: "1", name: "Admin" }
           }
           return null
         }
       })
     ],
     pages: {
-      signIn: "'/admin/login'",
+      signIn: "/admin/login",
     },
     callbacks: {
       async jwt({ token, user }) {

@@ -1,4 +1,4 @@
-"'use client'"
+"use client"
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -10,7 +10,7 @@ import { Login } from "../../components/Login";
 import Link from "next/link";
 
 interface Bookmark {
-  id: string;
+  slug: string;
   title: string;
 }
 
@@ -24,7 +24,7 @@ export default function UserPage() {
         const q = query(collection(db, "bookmarks"), where("userId", "==", user.uid));
         const querySnapshot = await getDocs(q);
         const fetchedBookmarks = querySnapshot.docs.map(doc => ({
-          id: doc.id,
+          slug: doc.data().slug,
           title: doc.data().title,
         }));
         setBookmarks(fetchedBookmarks);
@@ -60,8 +60,8 @@ export default function UserPage() {
         {bookmarks.length > 0 ? (
           <ul className="space-y-2">
             {bookmarks.map((bookmark) => (
-              <li key={bookmark.id}>
-                <Link href={`/wiki/${bookmark.id}`} className="text-blue-600 hover:underline">
+              <li key={bookmark.slug}>
+                <Link href={`/wiki/${bookmark.slug}`} className="text-blue-600 hover:underline">
                   {bookmark.title}
                 </Link>
               </li>

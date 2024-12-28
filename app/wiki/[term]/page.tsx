@@ -6,12 +6,10 @@ import { Footer } from "@/components/Footer";
 import { TableOfContents } from "@/components/TableOfContents";
 
 interface ArticleData {
-  metadata: {
-    title: string;
-    updatedAt: string;
-    tags: string[];
-  };
+  title: string;
   content: string;
+  updatedAt: string;
+  tags: { name: string }[];
 }
 
 export default function Term({ params }: { params: { term: string } }) {
@@ -20,6 +18,10 @@ export default function Term({ params }: { params: { term: string } }) {
   useEffect(() => {
     const fetchArticle = async () => {
       const response = await fetch(`/api/articles/${params.term}`);
+      if (!response.ok) {
+        console.error('記事の取得に失敗しました');
+        return;
+      }
       const data = await response.json();
       setArticle(data);
     };
@@ -34,8 +36,15 @@ export default function Term({ params }: { params: { term: string } }) {
       <main className="flex-grow">
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
-            <h1 className="text-4xl font-bold text-gray-900 mb-6">{article.metadata.title}</h1>
-            {/* メタ情報 */}
+            <h1 className="text-4xl font-bold text-gray-900 mb-6">{article.title}</h1>
+            <div className="text-sm text-gray-500 mb-4">
+              最終更新: {new Date(article.updatedAt).toLocaleDateString('ja-JP')}
+              {article.tags.length > 0 && (
+                <span className="ml-4">
+                  タグ: {article.tags.map(tag => tag.name).join(', ')}
+                </span>
+              )}
+            </div>
             <div className="mb-8">
               <TableOfContents />
             </div>
