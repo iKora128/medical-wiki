@@ -1,101 +1,95 @@
-import Image from "next/image";
+import Link from 'next/link'
+import { Header } from '../components/Header'
+import { Footer } from '../components/Footer'
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+      <Header />
+      <main className="flex-grow">
+        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-6">医療用語Wiki</h1>
+          
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">本日のWiki</h2>
+            <div className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300 ease-in-out">
+              <div className="px-6 py-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">高血圧（ハイパーテンション）</h3>
+                <p className="text-gray-700 mb-4">
+                  血圧が正常値よりも高い状態が続く病気です。長期間放置すると、心臓病や脳卒中などの深刻な合併症を引き起こす可能性があります。
+                </p>
+                <Link href="/wiki/hypertension" className="text-blue-600 hover:text-blue-800 font-medium">
+                  詳細を見る →
+                </Link>
+              </div>
+            </div>
+          </section>
+          
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">新機能</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300 ease-in-out">
+                <div className="px-6 py-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">質問掲示板</h3>
+                  <p className="text-gray-700 mb-4">医療に関する質問を投稿し、回答を得ることができます。</p>
+                  <Link href="/questions" className="text-blue-600 hover:text-blue-800 font-medium">
+                    質問する →
+                  </Link>
+                </div>
+              </div>
+              <div className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300 ease-in-out">
+                <div className="px-6 py-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">医療クイズ</h3>
+                  <p className="text-gray-700 mb-4">医療知識を楽しく学べるクイズに挑戦しましょう。</p>
+                  <Link href="/quiz" className="text-blue-600 hover:text-blue-800 font-medium">
+                    クイズに挑戦 →
+                  </Link>
+                </div>
+              </div>
+              <div className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300 ease-in-out">
+                <div className="px-6 py-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">コメント機能</h3>
+                  <p className="text-gray-700 mb-4">各記事にコメントを残し、議論に参加しましょう。</p>
+                  <Link href="/wiki/hypertension" className="text-blue-600 hover:text-blue-800 font-medium">
+                    記事を見る →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">カテゴリー</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {['循環器', '消化器', '呼吸器', '神経'].map((category) => (
+                <div key={category} className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300 ease-in-out">
+                  <div className="px-6 py-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{category}</h3>
+                    <Link href={`/category/${category.toLowerCase()}`} className="text-blue-600 hover:text-blue-800 font-medium">
+                      このカテゴリーを見る →
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">最近の更新</h2>
+            <ul className="bg-white shadow-lg rounded-lg overflow-hidden">
+              {['糖尿病', '心筋梗塞', '肺炎', '脳卒中'].map((term, index) => (
+                <li key={term} className={`px-6 py-4 ${index !== 3 ? 'border-b' : ''}`}>
+                  <Link href={`/wiki/${term.toLowerCase()}`} className="text-blue-600 hover:text-blue-800 font-medium">
+                    {term}
+                  </Link>
+                  <span className="text-gray-500 text-sm ml-2">2023年6月{index + 1}日更新</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      <Footer />
     </div>
-  );
+  )
 }
