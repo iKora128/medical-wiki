@@ -1,13 +1,19 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { articleSchema } from '@/lib/validations/article';
-import { getServerSession } from 'next-auth';
+import { verifyAdminToken } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    }
+
+    try {
+      await verifyAdminToken(authHeader.split("Bearer ")[1]);
+    } catch (error) {
+      return NextResponse.json({ error: "認証に失敗しました" }, { status: 401 });
     }
 
     const json = await request.json();
@@ -17,9 +23,7 @@ export async function POST(request: Request) {
       data: {
         ...validatedData,
         references: JSON.stringify(validatedData.references),
-        author: {
-          connect: { email: session.user.email! },
-        },
+        authorId: "system",
         tags: {
           connectOrCreate: validatedData.tags.map((tag) => ({
             where: { name: tag },

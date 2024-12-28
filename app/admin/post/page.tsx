@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 export default function AdminPost() {
   const router = useRouter()
@@ -176,7 +177,7 @@ export default function AdminPost() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              本文 (Markdown形式)
+              本文 (Markdown��式)
             </label>
             <textarea
               value={content}
@@ -214,7 +215,9 @@ export default function AdminPost() {
             <h2 className="text-2xl font-bold mb-4">プレビュー</h2>
             <div className="bg-white p-6 rounded-lg shadow">
               <h1 className="text-3xl font-bold mb-4">{title}</h1>
-              <ReactMarkdown>{content}</ReactMarkdown>
+              <div className="prose prose-blue max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+              </div>
               {tags && (
                 <div className="flex flex-wrap gap-2 mt-4">
                   {tags.split(",").map((tag) => (
