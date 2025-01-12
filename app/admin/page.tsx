@@ -37,7 +37,7 @@ export default function AdminDashboard() {
   if (loading || isLoading) return <div>Loading...</div>
 
   if (!user) {
-    router.push("/login")
+    router.push("/admin/login")
     return null
   }
 
