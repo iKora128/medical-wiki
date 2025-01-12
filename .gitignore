@@ -37,3 +37,4 @@ next-env.d.ts
 
 # Firebase Admin SDK
 med-wiki-e7f3c-firebase-adminsdk-*.json
+.env
