@@ -1,70 +1,86 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, Auth } from "firebase/auth";
-import { ConfigError } from "../components/ConfigError";
+"use client"
 
-let auth: Auth | undefined;
+import { createContext, useContext, useEffect, useState, ReactNode } from "react"
+import { getAuth, onAuthStateChanged, signOut, User, UserCredential, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"
+import { app } from "@/lib/firebase"
 
-const initializeAuth = async () => {
-  try {
-    auth = (await import("../lib/firebase")).auth;
-  } catch (error) {
-    console.error("'Failed to import Firebase:'", error);
-  }
-};
-
-initializeAuth();
-
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  error: Error | null;
-  auth: Auth | undefined;
+export type AuthContextType = {
+  user: User | null
+  loading: boolean
+  getIdToken: () => Promise<string | null>
+  signOut: () => Promise<void>
+  signInWithGoogle: () => Promise<UserCredential>
+  signInWithEmail: (email: string, password: string) => Promise<UserCredential>
+  signUpWithEmail: (email: string, password: string) => Promise<UserCredential>
+  resetPassword: (email: string) => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType>({ 
-  user: null, 
-  loading: true, 
-  error: null,
-  auth: undefined
-});
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+  getIdToken: async () => null,
+  signOut: async () => {},
+  signInWithGoogle: async () => {
+    throw new Error('Not implemented')
+  },
+  signInWithEmail: async () => {
+    throw new Error('Not implemented')
+  },
+  signUpWithEmail: async () => {
+    throw new Error('Not implemented')
+  },
+  resetPassword: async () => {
+    throw new Error('Not implemented')
+  },
+})
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const auth = getAuth(app)
 
   useEffect(() => {
-    if (!auth) {
-      setError(new Error("'Firebase authentication is not initialized'"));
-      setLoading(false);
-      return;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user)
+      setLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [auth])
+
+  const getIdToken = async () => {
+    try {
+      return user ? await user.getIdToken() : null
+    } catch (error) {
+      console.error("Error getting ID token:", error)
+      return null
     }
-
-    const unsubscribe = auth.onAuthStateChanged(
-      (user) => {
-        setUser(user);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("'Auth state change error:'", error);
-        setError(error);
-        setLoading(false);
-      }
-    );
-
-    return unsubscribe;
-  }, []);
-
-  if (error) {
-    return <ConfigError message={error.message} />;
   }
 
-  return (
-    <AuthContext.Provider value={{ user, loading, error, auth }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    loading,
+    getIdToken,
+    signOut: () => signOut(auth),
+    signInWithGoogle: () => {
+      const provider = new GoogleAuthProvider()
+      return signInWithPopup(auth, provider)
+    },
+    signInWithEmail: (email: string, password: string) => {
+      return signInWithEmailAndPassword(auth, email, password)
+    },
+    signUpWithEmail: (email: string, password: string) => {
+      return createUserWithEmailAndPassword(auth, email, password)
+    },
+    resetPassword: (email: string) => {
+      return sendPasswordResetEmail(auth, email)
+    },
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  return useContext(AuthContext)
+}
 

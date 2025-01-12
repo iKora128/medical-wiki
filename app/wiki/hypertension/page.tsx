@@ -1,8 +1,8 @@
 "use client"
 
-import { Header } from "../../../components/Header"
-import { Footer } from "../../../components/Footer"
-import { TableOfContents } from "../../../components/TableOfContents"
+import Header from "@/components/Header"
+import Footer from "@/components/Footer"
+import { TableOfContents } from "@/components/TableOfContents"
 import { Clock, ThumbsUp, ThumbsDown, Share2 } from "lucide-react"
 import Link from "next/link";
 

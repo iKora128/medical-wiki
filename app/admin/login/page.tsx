@@ -2,68 +2,73 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth"
-import { Header } from "../../../components/Header"
-import { Footer } from "../../../components/Footer"
 import { useAuth } from "@/contexts/AuthContext"
 
 export default function AdminLogin() {
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const { user, signInWithGoogle } = useAuth()
   const router = useRouter()
-  const { auth } = useAuth()
 
-  const handleAdminLogin = async () => {
+  const handleLogin = async () => {
     try {
-      const provider = new GoogleAuthProvider()
-      const result = await signInWithPopup(auth!, provider)
-      
-      // 管理者権限の確認
-      const idToken = await result.user.getIdToken()
-      const response = await fetch("/api/auth/verify-admin", {
+      setLoading(true)
+      setError(null)
+
+      // Googleログイン
+      const userCredential = await signInWithGoogle()
+      if (!userCredential) {
+        throw new Error("ログインに失敗しました")
+      }
+
+      // IDトークンの取得
+      const idToken = await userCredential.user.getIdToken()
+
+      // 管理者認証
+      const response = await fetch("/api/auth/admin/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
         },
+        body: JSON.stringify({ idToken }),
       })
 
-      if (response.ok) {
-        router.push("/admin/post")
-      } else {
-        setError("管理者権限がありません。")
+      if (!response.ok) {
+        throw new Error("管理者権限がありません")
       }
-    } catch (error) {
-      console.error("Login error:", error)
-      setError("ログインに失敗しました。")
+
+      router.push("/admin")
+    } catch (err) {
+      console.error("Login error:", err)
+      setError(err instanceof Error ? err.message : "ログインに失敗しました")
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-      <Header />
-      <main className="flex-grow flex items-center justify-center">
-        <div className="w-full max-w-md">
-          <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-            <h2 className="text-2xl font-bold mb-6 text-center">管理者ログイン</h2>
-            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-            <div className="flex items-center justify-center">
-              <button
-                onClick={handleAdminLogin}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center"
-              >
-                <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
-                  />
-                </svg>
-                Googleで管理者ログイン
-              </button>
-            </div>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            管理者ログイン
+          </h2>
         </div>
-      </main>
-      <Footer />
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+        >
+          {loading ? "ログイン中..." : "Googleでログイン"}
+        </button>
+      </div>
     </div>
   )
 }

@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
-import { Header } from "@/components/Header"
-import { Footer } from "@/components/Footer"
+import Header from "@/components/Header"
+import Footer from "@/components/Footer"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 

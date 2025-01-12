@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { useAuth } from "../../contexts/AuthContext";
-import { db } from "../../lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { Header } from "../../components/Header";
-import { Footer } from "../../components/Footer";
-import { Login } from "../../components/Login";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { Login } from "@/components/Login";
 import Link from "next/link";
 
 interface Bookmark {

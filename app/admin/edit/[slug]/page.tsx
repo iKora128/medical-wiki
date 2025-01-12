@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
-import { Header } from "@/components/Header"
-import { Footer } from "@/components/Footer"
+import Header from "@/components/Header"
+import Footer from "@/components/Footer"
 import { Article } from "@/types/article"
 
 export default function EditArticle({ params }: { params: { slug: string } }) {
