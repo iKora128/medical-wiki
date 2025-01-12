@@ -5,7 +5,6 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { TableOfContents } from "@/components/TableOfContents";
 import BookmarkButton from "@/components/BookmarkButton";
-import ShareButton from "@/components/ShareButton";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase-admin";
@@ -67,10 +66,6 @@ export default async function Term({ params }: { params: { term: string } }) {
             <BookmarkButton
               slug={article.slug}
               initialIsBookmarked={isBookmarked}
-            />
-            <ShareButton
-              slug={article.slug}
-              title={article.title}
             />
           </div>
 

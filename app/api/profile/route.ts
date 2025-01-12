@@ -1,94 +1,33 @@
-import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
-import { verifyUser } from "@/lib/auth"
+import { verifyAuth } from '@/lib/auth'
+import { successResponse, errorResponse } from '@/lib/api-response'
+import { ProfileRepository } from '@/lib/repositories/profile'
+import { withErrorHandling } from '@/lib/api-middleware'
+import { z } from 'zod'
 
-// プロフィール取得
-export async function GET(request: Request) {
-  try {
-    const user = await verifyUser(request)
-    if (!user) {
-      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
-    }
+const profileSchema = z.object({
+  name: z.string().optional(),
+  bio: z.string().optional(),
+  specialty: z.string().optional(),
+  occupation: z.string().optional(),
+  website: z.string().url().optional(),
+})
 
-    const profile = await prisma.profile.findUnique({
-      where: { userId: user.uid },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            role: true,
-          }
-        }
-      }
-    })
+export const GET = withErrorHandling(async (request: Request) => {
+  const user = await verifyAuth(request)
+  const profile = await ProfileRepository.findByUserId(user.uid)
 
-    if (!profile) {
-      // プロフィールが存在しない場合は新規作成
-      const newProfile = await prisma.profile.create({
-        data: {
-          userId: user.uid,
-        },
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-              role: true,
-            }
-          }
-        }
-      })
-      return NextResponse.json(newProfile)
-    }
-
-    return NextResponse.json(profile)
-  } catch (error) {
-    console.error("プロフィール取得エラー:", error)
-    return NextResponse.json({ error: "プロフィールの取得に失敗しました" }, { status: 500 })
+  if (!profile) {
+    return errorResponse('プロフィールが見つかりません', 404)
   }
-}
 
-// プロフィール更新
-export async function PUT(request: Request) {
-  try {
-    const user = await verifyUser(request)
-    if (!user) {
-      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
-    }
+  return successResponse(profile)
+})
 
-    const data = await request.json()
-    const { bio, specialty, occupation, website } = data
+export const PUT = withErrorHandling(async (request: Request) => {
+  const user = await verifyAuth(request)
+  const body = await request.json()
+  const data = profileSchema.parse(body)
 
-    const updatedProfile = await prisma.profile.upsert({
-      where: { userId: user.uid },
-      update: {
-        bio,
-        specialty,
-        occupation,
-        website,
-      },
-      create: {
-        userId: user.uid,
-        bio,
-        specialty,
-        occupation,
-        website,
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            role: true,
-          }
-        }
-      }
-    })
-
-    return NextResponse.json(updatedProfile)
-  } catch (error) {
-    console.error("プロフィール更新エラー:", error)
-    return NextResponse.json({ error: "プロフィールの更新に失敗しました" }, { status: 500 })
-  }
-} 
+  const profile = await ProfileRepository.upsert(user.uid, data)
+  return successResponse(profile, 'プロフィールを更新しました')
+}) 

@@ -1,163 +1,101 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { verifyUser } from "@/lib/auth"
+import { verifyAuth } from "@/lib/auth"
+import { successResponse, errorResponse } from "@/lib/api-response"
+import { withErrorHandling } from "@/lib/api-middleware"
+import { z } from 'zod'
 
-// 質問詳細取得
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const question = await prisma.question.findUnique({
-      where: { id: params.id },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
+const questionUpdateSchema = z.object({
+  title: z.string().optional(),
+  content: z.string().optional(),
+  status: z.enum(['OPEN', 'CLOSED']).optional(),
+})
+
+export const GET = withErrorHandling(async (request: Request, { params }: { params: { id: string } }) => {
+  const question = await prisma.question.findUnique({
+    where: { id: params.id },
+    include: {
+      user: {
+        select: {
+          name: true,
+          email: true,
         },
-        tags: true,
-        answers: {
-          include: {
-            user: {
-              select: {
-                name: true,
-                email: true,
-              },
+      },
+      answers: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
             },
           },
-          orderBy: {
-            isAccepted: "desc",
-            createdAt: "desc",
-          },
+        },
+        orderBy: [
+          { isAccepted: 'desc' },
+          { createdAt: 'desc' },
+        ],
+      },
+    },
+  })
+
+  if (!question) {
+    return errorResponse("質問が見つかりません", 404)
+  }
+
+  return successResponse(question)
+})
+
+export const PUT = withErrorHandling(async (request: Request, { params }: { params: { id: string } }) => {
+  const user = await verifyAuth(request)
+  const body = await request.json()
+  const data = questionUpdateSchema.parse(body)
+
+  const question = await prisma.question.findUnique({
+    where: { id: params.id },
+  })
+
+  if (!question) {
+    return errorResponse("質問が見つかりません", 404)
+  }
+
+  if (question.userId !== user.uid) {
+    return errorResponse("この質問を編集する権限がありません", 403)
+  }
+
+  const updatedQuestion = await prisma.question.update({
+    where: { id: params.id },
+    data,
+    include: {
+      user: {
+        select: {
+          name: true,
+          email: true,
         },
       },
-    })
+    },
+  })
 
-    if (!question) {
-      return NextResponse.json(
-        { error: "質問が見つかりません" },
-        { status: 404 }
-      )
-    }
+  return successResponse(updatedQuestion, "質問を更新しました")
+})
 
-    return NextResponse.json(question)
-  } catch (error) {
-    console.error("質問取得エラー:", error)
-    return NextResponse.json(
-      { error: "質問の取得に失敗しました" },
-      { status: 500 }
-    )
+export const DELETE = withErrorHandling(async (request: Request, { params }: { params: { id: string } }) => {
+  const user = await verifyAuth(request)
+
+  const question = await prisma.question.findUnique({
+    where: { id: params.id },
+  })
+
+  if (!question) {
+    return errorResponse("質問が見つかりません", 404)
   }
-}
 
-// 質問更新
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const user = await verifyUser(request)
-    if (!user) {
-      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
-    }
-
-    // 質問の存在と所有権を確認
-    const existingQuestion = await prisma.question.findUnique({
-      where: { id: params.id },
-    })
-
-    if (!existingQuestion) {
-      return NextResponse.json(
-        { error: "質問が見つかりません" },
-        { status: 404 }
-      )
-    }
-
-    if (existingQuestion.userId !== user.uid) {
-      return NextResponse.json(
-        { error: "この操作を行う権限がありません" },
-        { status: 403 }
-      )
-    }
-
-    const { title, content, tags, status } = await request.json()
-    const question = await prisma.question.update({
-      where: { id: params.id },
-      data: {
-        title,
-        content,
-        status,
-        tags: {
-          set: [],
-          connectOrCreate: tags.map((tag: string) => ({
-            where: { name: tag },
-            create: { name: tag },
-          })),
-        },
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-        tags: true,
-      },
-    })
-
-    return NextResponse.json(question)
-  } catch (error) {
-    console.error("質問更新エラー:", error)
-    return NextResponse.json(
-      { error: "質問の更新に失敗しました" },
-      { status: 500 }
-    )
+  if (question.userId !== user.uid) {
+    return errorResponse("この質問を削除する権限がありません", 403)
   }
-}
 
-// 質問削除
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const user = await verifyUser(request)
-    if (!user) {
-      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
-    }
+  await prisma.question.delete({
+    where: { id: params.id },
+  })
 
-    // 質問の存在と所有権を確認
-    const existingQuestion = await prisma.question.findUnique({
-      where: { id: params.id },
-    })
-
-    if (!existingQuestion) {
-      return NextResponse.json(
-        { error: "質問が見つかりません" },
-        { status: 404 }
-      )
-    }
-
-    if (existingQuestion.userId !== user.uid) {
-      return NextResponse.json(
-        { error: "この操作を行う権限がありません" },
-        { status: 403 }
-      )
-    }
-
-    await prisma.question.delete({
-      where: { id: params.id },
-    })
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("質問削除エラー:", error)
-    return NextResponse.json(
-      { error: "質問の削除に失敗しました" },
-      { status: 500 }
-    )
-  }
-} 
+  return successResponse(null, "質問を削除しました")
+}) 

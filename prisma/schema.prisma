@@ -23,7 +23,6 @@ model Article {
   authorId    String
   comments    Comment[]
   bookmarks   Bookmark[]
-  shares      Share[]
   tags        Tag[]
 }
 
@@ -31,7 +30,6 @@ model Tag {
   id        String     @id @default(cuid())
   name      String     @unique
   articles  Article[]
-  questions Question[] @relation("QuestionToTag")
 }
 
 model User {
@@ -45,10 +43,6 @@ model User {
   articles  Article[]
   comments  Comment[]
   bookmarks Bookmark[]
-  shares    Share[]
-  
-  questions Question[]
-  answers   Answer[]
 }
 
 model Profile {
@@ -75,33 +69,6 @@ model Bookmark {
   @@unique([userId, articleId])
 }
 
-model Question {
-  id          String    @id @default(cuid())
-  title       String
-  content     String
-  userId      String
-  status      String    @default("OPEN") // OPEN, CLOSED
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  user        User      @relation(fields: [userId], references: [id])
-  answers     Answer[]
-  tags        Tag[]     @relation("QuestionToTag")
-}
-
-model Answer {
-  id          String    @id @default(cuid())
-  content     String
-  userId      String
-  questionId  String
-  isAccepted  Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  user        User      @relation(fields: [userId], references: [id])
-  question    Question  @relation(fields: [questionId], references: [id])
-}
-
 model Comment {
   id        String   @id @default(cuid())
   content   String
@@ -110,14 +77,4 @@ model Comment {
   articleId String
   author    User     @relation(fields: [authorId], references: [id])
   authorId  String
-}
-
-model Share {
-  id        String   @id @default(cuid())
-  userId    String
-  articleId String
-  platform  String   // "twitter", "facebook" など
-  createdAt DateTime @default(now())
-  article   Article  @relation(fields: [articleId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
 } 

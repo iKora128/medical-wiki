@@ -1,39 +1,26 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { verifyUser } from '@/lib/auth'
+import { verifyAuth, handleAuthError } from '@/lib/auth'
+import { successResponse, errorResponse } from '@/lib/api-response'
+import { BookmarkRepository } from '@/lib/repositories/bookmark'
+import { ArticleRepository } from '@/lib/repositories/article'
 
 export async function POST(
   request: Request,
   { params }: { params: { slug: string } }
 ) {
   try {
-    const user = await verifyUser(request)
-    if (!user) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
-    }
+    const user = await verifyAuth(request)
 
-    const article = await prisma.article.findUnique({
-      where: { slug: params.slug }
-    })
-
+    const article = await ArticleRepository.findBySlug(params.slug)
     if (!article) {
-      return NextResponse.json({ error: '記事が見つかりません' }, { status: 404 })
+      return errorResponse('記事が見つかりません', 404)
     }
 
-    const bookmark = await prisma.bookmark.create({
-      data: {
-        userId: user.uid,
-        articleId: article.id
-      }
-    })
-
-    return NextResponse.json(bookmark)
+    await BookmarkRepository.create(user.uid, article.id)
+    return successResponse({ success: true }, 'ブックマークを追加しました')
   } catch (error) {
-    console.error('Error adding bookmark:', error)
-    return NextResponse.json(
-      { error: 'ブックマークの追加に失敗しました' },
-      { status: 500 }
-    )
+    return handleAuthError(error)
   }
 }
 
@@ -42,34 +29,16 @@ export async function DELETE(
   { params }: { params: { slug: string } }
 ) {
   try {
-    const user = await verifyUser(request)
-    if (!user) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
-    }
+    const user = await verifyAuth(request)
 
-    const article = await prisma.article.findUnique({
-      where: { slug: params.slug }
-    })
-
+    const article = await ArticleRepository.findBySlug(params.slug)
     if (!article) {
-      return NextResponse.json({ error: '記事が見つかりません' }, { status: 404 })
+      return errorResponse('記事が見つかりません', 404)
     }
 
-    await prisma.bookmark.delete({
-      where: {
-        userId_articleId: {
-          userId: user.uid,
-          articleId: article.id
-        }
-      }
-    })
-
-    return NextResponse.json({ success: true })
+    await BookmarkRepository.delete(user.uid, article.id)
+    return successResponse({ success: true }, 'ブックマークを削除しました')
   } catch (error) {
-    console.error('Error removing bookmark:', error)
-    return NextResponse.json(
-      { error: 'ブックマークの削除に失敗しました' },
-      { status: 500 }
-    )
+    return handleAuthError(error)
   }
 } 

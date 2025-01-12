@@ -1,42 +1,34 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { verifyUser } from "@/lib/auth"
+import { verifyAuth } from "@/lib/auth"
+import { successResponse, errorResponse } from "@/lib/api-response"
+import { withErrorHandling } from "@/lib/api-middleware"
+import { z } from 'zod'
 
-export async function POST(
-  request: Request,
-  { params }: { params: { slug: string } }
-) {
-  try {
-    const user = await verifyUser(request)
-    if (!user) {
-      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
-    }
+const shareSchema = z.object({
+  platform: z.string()
+})
 
-    const article = await prisma.article.findUnique({
-      where: { slug: params.slug }
-    })
+export const POST = withErrorHandling(async (request: Request, { params }: { params: { slug: string } }) => {
+  const user = await verifyAuth(request)
+  const body = await request.json()
+  const { platform } = shareSchema.parse(body)
 
-    if (!article) {
-      return NextResponse.json({ error: "記事が見つかりません" }, { status: 404 })
-    }
+  const article = await prisma.article.findUnique({
+    where: { slug: params.slug },
+  })
 
-    const { platform } = await request.json()
-    if (!platform) {
-      return NextResponse.json({ error: "プラットフォームが指定されていません" }, { status: 400 })
-    }
-
-    // 共有を記録
-    const share = await prisma.share.create({
-      data: {
-        userId: user.uid,
-        articleId: article.id,
-        platform
-      }
-    })
-
-    return NextResponse.json(share)
-  } catch (error) {
-    console.error("共有記録エラー:", error)
-    return NextResponse.json({ error: "共有の記録に失敗しました" }, { status: 500 })
+  if (!article) {
+    return errorResponse("記事が見つかりません", 404)
   }
-} 
+
+  const share = await prisma.share.create({
+    data: {
+      userId: user.uid,
+      articleId: article.id,
+      platform
+    },
+  })
+
+  return successResponse(share, "記事を共有しました")
+}) 

@@ -1,167 +1,65 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { verifyUser } from "@/lib/auth"
+import { verifyAuth } from "@/lib/auth"
+import { successResponse, errorResponse } from "@/lib/api-response"
+import { withErrorHandling } from "@/lib/api-middleware"
 
-// 回答更新
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string; answerId: string } }
-) {
-  try {
-    const user = await verifyUser(request)
-    if (!user) {
-      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
-    }
+export const PUT = withErrorHandling(async (request: Request, { params }: { params: { id: string; answerId: string } }) => {
+  const user = await verifyAuth(request)
+  const { content } = await request.json()
 
-    // 回答の存在と所有権を確認
-    const existingAnswer = await prisma.answer.findUnique({
-      where: { id: params.answerId },
-    })
+  if (!content) {
+    return errorResponse("回答内容は必須です", 400)
+  }
 
-    if (!existingAnswer) {
-      return NextResponse.json(
-        { error: "回答が見つかりません" },
-        { status: 404 }
-      )
-    }
+  const answer = await prisma.answer.findUnique({
+    where: { id: params.answerId },
+    include: { question: true }
+  })
 
-    if (existingAnswer.userId !== user.uid) {
-      return NextResponse.json(
-        { error: "この操作を行う権限がありません" },
-        { status: 403 }
-      )
-    }
+  if (!answer) {
+    return errorResponse("回答が見つかりません", 404)
+  }
 
-    const { content } = await request.json()
-    const answer = await prisma.answer.update({
-      where: { id: params.answerId },
-      data: { content },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
+  if (answer.userId !== user.uid) {
+    return errorResponse("この回答を編集する権限がありません", 403)
+  }
+
+  const updatedAnswer = await prisma.answer.update({
+    where: { id: params.answerId },
+    data: { content },
+    include: {
+      user: {
+        select: {
+          name: true,
+          email: true,
         },
       },
-    })
+    },
+  })
 
-    return NextResponse.json(answer)
-  } catch (error) {
-    console.error("回答更新エラー:", error)
-    return NextResponse.json(
-      { error: "回答の更新に失敗しました" },
-      { status: 500 }
-    )
+  return successResponse(updatedAnswer, "回答を更新しました")
+})
+
+export const DELETE = withErrorHandling(async (request: Request, { params }: { params: { id: string; answerId: string } }) => {
+  const user = await verifyAuth(request)
+
+  const answer = await prisma.answer.findUnique({
+    where: { id: params.answerId },
+    include: { question: true }
+  })
+
+  if (!answer) {
+    return errorResponse("回答が見つかりません", 404)
   }
-}
 
-// 回答削除
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string; answerId: string } }
-) {
-  try {
-    const user = await verifyUser(request)
-    if (!user) {
-      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
-    }
-
-    // 回答の存在と所有権を確認
-    const existingAnswer = await prisma.answer.findUnique({
-      where: { id: params.answerId },
-    })
-
-    if (!existingAnswer) {
-      return NextResponse.json(
-        { error: "回答が見つかりません" },
-        { status: 404 }
-      )
-    }
-
-    if (existingAnswer.userId !== user.uid) {
-      return NextResponse.json(
-        { error: "この操作を行う権限がありません" },
-        { status: 403 }
-      )
-    }
-
-    await prisma.answer.delete({
-      where: { id: params.answerId },
-    })
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("回答削除エラー:", error)
-    return NextResponse.json(
-      { error: "回答の削除に失敗しました" },
-      { status: 500 }
-    )
+  if (answer.userId !== user.uid) {
+    return errorResponse("この回答を削除する権限がありません", 403)
   }
-}
 
-// ベストアンサー選択
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string; answerId: string } }
-) {
-  try {
-    const user = await verifyUser(request)
-    if (!user) {
-      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
-    }
+  await prisma.answer.delete({
+    where: { id: params.answerId },
+  })
 
-    // 質問の存在と所有権を確認
-    const question = await prisma.question.findUnique({
-      where: { id: params.id },
-    })
-
-    if (!question) {
-      return NextResponse.json(
-        { error: "質問が見つかりません" },
-        { status: 404 }
-      )
-    }
-
-    if (question.userId !== user.uid) {
-      return NextResponse.json(
-        { error: "この操作を行う権限がありません" },
-        { status: 403 }
-      )
-    }
-
-    // 他のベストアンサーを解除
-    await prisma.answer.updateMany({
-      where: { questionId: params.id },
-      data: { isAccepted: false },
-    })
-
-    // 新しいベストアンサーを設定
-    const answer = await prisma.answer.update({
-      where: { id: params.answerId },
-      data: { isAccepted: true },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-    })
-
-    // 質問のステータスを更新
-    await prisma.question.update({
-      where: { id: params.id },
-      data: { status: "CLOSED" },
-    })
-
-    return NextResponse.json(answer)
-  } catch (error) {
-    console.error("ベストアンサー選択エラー:", error)
-    return NextResponse.json(
-      { error: "ベストアンサーの選択に失敗しました" },
-      { status: 500 }
-    )
-  }
-} 
+  return successResponse(null, "回答を削除しました")
+}) 
