@@ -30,19 +30,24 @@ model Tag {
   id        String     @id @default(cuid())
   name      String     @unique
   articles  Article[]
+  questions Question[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
+  id        String     @id @default(cuid())
   name      String?
-  role      String    @default("USER")
-  createdAt DateTime  @default(now())
-  
+  email     String     @unique
+  role      String     @default("USER")
   profile   Profile?
   articles  Article[]
   comments  Comment[]
   bookmarks Bookmark[]
+  questions Question[]
+  answers   Answer[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model Profile {
@@ -71,10 +76,44 @@ model Bookmark {
 
 model Comment {
   id        String   @id @default(cuid())
-  content   String
-  createdAt DateTime @default(now())
-  article   Article  @relation(fields: [articleId], references: [id])
+  content   String   @db.Text
   articleId String
-  author    User     @relation(fields: [authorId], references: [id])
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([articleId])
+  @@index([authorId])
+}
+
+model Question {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  status    String   @default("OPEN")
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers   Answer[]
+  tags      Tag[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  content    String   @db.Text
+  isAccepted Boolean  @default(false)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([questionId])
 } 

@@ -1,21 +1,16 @@
-import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 import { successResponse, errorResponse } from "@/lib/api-response"
 import { withErrorHandling } from "@/lib/api-middleware"
+import { AnswerRepository } from "@/lib/repositories/answer"
+import { z } from 'zod'
+
+const answerUpdateSchema = z.object({
+  content: z.string().min(1, "回答内容は必須です"),
+})
 
 export const PUT = withErrorHandling(async (request: Request, { params }: { params: { id: string; answerId: string } }) => {
   const user = await verifyAuth(request)
-  const { content } = await request.json()
-
-  if (!content) {
-    return errorResponse("回答内容は必須です", 400)
-  }
-
-  const answer = await prisma.answer.findUnique({
-    where: { id: params.answerId },
-    include: { question: true }
-  })
+  const answer = await AnswerRepository.findById(params.answerId)
 
   if (!answer) {
     return errorResponse("回答が見つかりません", 404)
@@ -25,29 +20,16 @@ export const PUT = withErrorHandling(async (request: Request, { params }: { para
     return errorResponse("この回答を編集する権限がありません", 403)
   }
 
-  const updatedAnswer = await prisma.answer.update({
-    where: { id: params.answerId },
-    data: { content },
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-    },
-  })
+  const body = await request.json()
+  const { content } = answerUpdateSchema.parse(body)
 
+  const updatedAnswer = await AnswerRepository.update(params.answerId, { content })
   return successResponse(updatedAnswer, "回答を更新しました")
 })
 
 export const DELETE = withErrorHandling(async (request: Request, { params }: { params: { id: string; answerId: string } }) => {
   const user = await verifyAuth(request)
-
-  const answer = await prisma.answer.findUnique({
-    where: { id: params.answerId },
-    include: { question: true }
-  })
+  const answer = await AnswerRepository.findById(params.answerId)
 
   if (!answer) {
     return errorResponse("回答が見つかりません", 404)
@@ -57,9 +39,22 @@ export const DELETE = withErrorHandling(async (request: Request, { params }: { p
     return errorResponse("この回答を削除する権限がありません", 403)
   }
 
-  await prisma.answer.delete({
-    where: { id: params.answerId },
-  })
-
+  await AnswerRepository.delete(params.answerId)
   return successResponse(null, "回答を削除しました")
+})
+
+export const PATCH = withErrorHandling(async (request: Request, { params }: { params: { id: string; answerId: string } }) => {
+  const user = await verifyAuth(request)
+  const answer = await AnswerRepository.findById(params.answerId)
+
+  if (!answer) {
+    return errorResponse("回答が見つかりません", 404)
+  }
+
+  if (answer.questionId !== params.id) {
+    return errorResponse("この回答は指定された質問に属していません", 400)
+  }
+
+  await AnswerRepository.acceptAnswer(params.answerId, params.id)
+  return successResponse(null, "ベストアンサーを設定しました")
 }) 

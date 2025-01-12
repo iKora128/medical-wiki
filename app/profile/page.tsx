@@ -1,131 +1,195 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/AuthContext"
-import Image from "next/image"
-import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/hooks/useAuth"
+import AuthModal from "@/components/common/AuthModal"
 
-type Profile = {
+interface Profile {
   id: string
-  userId: string
-  avatarUrl: string | null
+  name: string | null
   bio: string | null
   specialty: string | null
   occupation: string | null
   website: string | null
-  user: {
-    name: string | null
-    email: string
-    role: string
-  }
 }
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      const response = await fetch("/api/profile")
+      const data = await response.json()
+
+      if (response.ok) {
+        setProfile(data.data.profile)
+      } else {
+        setError(data.message)
+      }
+    } catch (error) {
+      console.error("Failed to fetch profile:", error)
+      setError("プロフィールの取得に失敗しました")
+    }
+  }, [])
 
   useEffect(() => {
-    if (!user) {
-      router.push("/login")
+    if (isAuthenticated) {
+      fetchProfile()
+    }
+  }, [isAuthenticated, fetchProfile])
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
+    if (!isAuthenticated) {
+      setShowAuthModal(true)
       return
     }
 
-    fetchProfile()
-  }, [user, router])
+    setIsSubmitting(true)
+    setError(null)
 
-  const fetchProfile = async () => {
+    const formData = new FormData(e.currentTarget)
+    const data = {
+      name: formData.get("name") as string,
+      bio: formData.get("bio") as string,
+      specialty: formData.get("specialty") as string,
+      occupation: formData.get("occupation") as string,
+      website: formData.get("website") as string,
+    }
+
     try {
-      const response = await fetch("/api/profile")
-      if (!response.ok) throw new Error("プロフィールの取得に失敗しました")
-      const data = await response.json()
-      setProfile(data)
+      const response = await fetch("/api/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      })
+
+      if (response.ok) {
+        router.refresh()
+      } else {
+        const responseData = await response.json()
+        setError(responseData.message || "プロフィールの更新に失敗しました")
+      }
     } catch (error) {
-      setError("プロフィールの取得に失敗しました")
+      setError("プロフィールの更新に失敗しました")
     } finally {
-      setIsLoading(false)
+      setIsSubmitting(false)
     }
   }
 
-  if (isLoading) return <div>読み込み中...</div>
-  if (error) return <div className="text-red-500">{error}</div>
-  if (!profile) return null
-
-  return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">プロフィール</h1>
-        <Link
-          href="/profile/edit"
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          編集
-        </Link>
-      </div>
-
-      <div className="space-y-6">
-        {/* プロフィール画像 */}
-        <div className="flex items-center gap-4">
-          {profile.avatarUrl ? (
-            <Image
-              src={profile.avatarUrl}
-              alt="プロフィール画像"
-              width={100}
-              height={100}
-              className="rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
-              <span className="text-gray-500">No Image</span>
-            </div>
-          )}
-          <div>
-            <h2 className="text-xl font-semibold">{profile.user.name || "名前未設定"}</h2>
-            <p className="text-gray-600">{profile.user.email}</p>
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800">
+            プロフィールを表示するにはログインが必要です。
           </div>
         </div>
+      </div>
+    )
+  }
 
-        {/* 自己紹介 */}
-        {profile.bio && (
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold mb-8">プロフィール設定</h1>
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <h3 className="text-lg font-medium mb-2">自己紹介</h3>
-            <p className="text-gray-700 whitespace-pre-wrap">{profile.bio}</p>
+            <label htmlFor="name" className="block text-sm font-medium mb-2">
+              名前
+            </label>
+            <Input
+              id="name"
+              name="name"
+              defaultValue={profile?.name || ""}
+              placeholder="あなたの名前"
+              disabled={isSubmitting}
+            />
           </div>
-        )}
 
-        {/* 専門分野 */}
-        {profile.specialty && (
           <div>
-            <h3 className="text-lg font-medium mb-2">専門分野</h3>
-            <p className="text-gray-700">{profile.specialty}</p>
+            <label htmlFor="bio" className="block text-sm font-medium mb-2">
+              自己紹介
+            </label>
+            <Textarea
+              id="bio"
+              name="bio"
+              defaultValue={profile?.bio || ""}
+              placeholder="あなたについて教えてください"
+              rows={4}
+              disabled={isSubmitting}
+            />
           </div>
-        )}
 
-        {/* 職業 */}
-        {profile.occupation && (
           <div>
-            <h3 className="text-lg font-medium mb-2">職業</h3>
-            <p className="text-gray-700">{profile.occupation}</p>
+            <label htmlFor="specialty" className="block text-sm font-medium mb-2">
+              専門分野
+            </label>
+            <Input
+              id="specialty"
+              name="specialty"
+              defaultValue={profile?.specialty || ""}
+              placeholder="例: 内科、外科、小児科など"
+              disabled={isSubmitting}
+            />
           </div>
-        )}
 
-        {/* ウェブサイト */}
-        {profile.website && (
           <div>
-            <h3 className="text-lg font-medium mb-2">ウェブサイト</h3>
-            <a
-              href={profile.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:underline"
-            >
-              {profile.website}
-            </a>
+            <label htmlFor="occupation" className="block text-sm font-medium mb-2">
+              職業
+            </label>
+            <Input
+              id="occupation"
+              name="occupation"
+              defaultValue={profile?.occupation || ""}
+              placeholder="例: 医師、看護師、研修医など"
+              disabled={isSubmitting}
+            />
           </div>
-        )}
+
+          <div>
+            <label htmlFor="website" className="block text-sm font-medium mb-2">
+              ウェブサイト
+            </label>
+            <Input
+              id="website"
+              name="website"
+              type="url"
+              defaultValue={profile?.website || ""}
+              placeholder="https://example.com"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-500">{error}</p>
+          )}
+
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "更新中..." : "プロフィールを更新"}
+            </Button>
+          </div>
+        </form>
+
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          title="ログインが必要です"
+          message="プロフィールを更新するにはログインが必要です。"
+        />
       </div>
     </div>
   )

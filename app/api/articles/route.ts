@@ -1,19 +1,21 @@
+export const runtime = 'nodejs';
+
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { articleSchema } from '@/lib/validations/article';
-import { verifyAdminToken } from '@/lib/auth';
+import { verifyAuth, verifyRole, ROLES } from '@/lib/auth';
+import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
-    }
-
+    const cookieStore = cookies();
+    const sessionCookie = cookieStore.get('session')?.value;
+    const user = await verifyAuth(sessionCookie);
+    
     try {
-      await verifyAdminToken(authHeader.split("Bearer ")[1]);
+      await verifyRole(user, ROLES.ADMIN);
     } catch (error) {
-      return NextResponse.json({ error: "認証に失敗しました" }, { status: 401 });
+      return NextResponse.json({ error: "管理者権限が必要です" }, { status: 403 });
     }
 
     const json = await request.json();
@@ -23,7 +25,7 @@ export async function POST(request: Request) {
       data: {
         ...validatedData,
         references: JSON.stringify(validatedData.references),
-        authorId: "system",
+        authorId: user.uid,
         tags: {
           connectOrCreate: validatedData.tags.map((tag) => ({
             where: { name: tag },

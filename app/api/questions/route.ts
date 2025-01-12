@@ -1,42 +1,24 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 import { successResponse, errorResponse } from "@/lib/api-response"
 import { withErrorHandling } from "@/lib/api-middleware"
+import { QuestionRepository } from "@/lib/repositories/question"
 import { z } from 'zod'
 
 const questionSchema = z.object({
-  title: z.string(),
-  content: z.string(),
+  title: z.string().min(1, "タイトルは必須です"),
+  content: z.string().min(1, "内容は必須です"),
   tags: z.array(z.string()).optional(),
 })
 
 export const POST = withErrorHandling(async (request: Request) => {
   const user = await verifyAuth(request)
   const body = await request.json()
-  const { title, content, tags = [] } = questionSchema.parse(body)
+  const data = questionSchema.parse(body)
 
-  const question = await prisma.question.create({
-    data: {
-      title,
-      content,
-      userId: user.uid,
-      tags: {
-        connectOrCreate: tags.map(tag => ({
-          where: { name: tag },
-          create: { name: tag },
-        })),
-      },
-    },
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-      tags: true,
-    },
+  const question = await QuestionRepository.create({
+    ...data,
+    userId: user.uid,
   })
 
   return successResponse(question, "質問を作成しました")
@@ -44,46 +26,17 @@ export const POST = withErrorHandling(async (request: Request) => {
 
 export const GET = withErrorHandling(async (request: Request) => {
   const { searchParams } = new URL(request.url)
-  const tag = searchParams.get('tag')
-  const status = searchParams.get('status')
+  const tag = searchParams.get('tag') || undefined
+  const status = searchParams.get('status') || undefined
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '10')
-  const skip = (page - 1) * limit
 
-  const where = {
-    ...(tag && {
-      tags: {
-        some: {
-          name: tag,
-        },
-      },
-    }),
-    ...(status && { status }),
-  }
-
-  const [questions, total] = await Promise.all([
-    prisma.question.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-        tags: true,
-        _count: {
-          select: {
-            answers: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip,
-    }),
-    prisma.question.count({ where }),
-  ])
+  const { questions, total } = await QuestionRepository.findMany({
+    tag,
+    status,
+    page,
+    limit,
+  })
 
   return successResponse({
     questions,

@@ -1,135 +1,150 @@
 import { prisma } from '@/lib/prisma'
-import type { Article, Bookmark, Tag } from '@prisma/client'
+import { generateSlug } from '@/lib/utils/slug'
+import { Prisma } from '@prisma/client'
+import type { Article, Tag } from '@prisma/client'
 
 export type ArticleWithRelations = Article & {
-  tags: Tag[];
-  bookmarks?: Bookmark[];
+  tags: Tag[]
   author: {
-    id: string;
-    name: string | null;
-  };
-};
+    name: string | null
+  }
+  _count?: {
+    bookmarks: number
+  }
+}
 
 export class ArticleRepository {
   static async findBySlug(slug: string, userId?: string | null): Promise<ArticleWithRelations | null> {
     return prisma.article.findUnique({
       where: { slug },
       include: {
+        tags: true,
         author: {
           select: {
-            id: true,
-            name: true,
-          },
+            name: true
+          }
         },
-        tags: true,
-        bookmarks: userId ? {
-          where: { userId }
-        } : false,
-      },
-    });
+        ...(userId && {
+          bookmarks: {
+            where: { userId }
+          }
+        })
+      }
+    })
   }
 
-  static async findMany(options?: {
-    tag?: string;
-    authorId?: string;
-    status?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<ArticleWithRelations[]> {
-    return prisma.article.findMany({
-      where: {
-        ...(options?.tag && {
-          tags: {
-            some: { name: options.tag }
+  static async findMany(params: {
+    tag?: string
+    authorId?: string
+    status?: string
+    page?: number
+    limit?: number
+  }): Promise<{ articles: ArticleWithRelations[]; total: number }> {
+    const { tag, authorId, status, page = 1, limit = 10 } = params
+    const skip = (page - 1) * limit
+
+    const where: Prisma.ArticleWhereInput = {
+      ...(tag && {
+        tags: {
+          some: { name: tag }
+        }
+      }),
+      ...(authorId && { authorId }),
+      ...(status && { status })
+    }
+
+    const [articles, total] = await Promise.all([
+      prisma.article.findMany({
+        where,
+        include: {
+          tags: true,
+          author: {
+            select: {
+              name: true
+            }
           }
-        }),
-        ...(options?.authorId && { authorId: options.authorId }),
-        ...(options?.status && { status: options.status }),
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-          },
         },
-        tags: true,
-      },
-      take: options?.limit,
-      skip: options?.offset,
-      orderBy: { updatedAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.article.count({ where })
+    ])
+
+    return { articles, total }
   }
 
   static async create(data: {
-    slug: string;
-    title: string;
-    content: string;
-    authorId: string;
-    tags: string[];
-    status?: string;
+    title: string
+    content: string
+    slug?: string
+    status: string
+    authorId: string
+    tags: string[]
   }): Promise<ArticleWithRelations> {
-    const { tags: tagNames, ...articleData } = data;
+    const slug = data.slug || generateSlug(data.title)
 
     return prisma.article.create({
       data: {
-        ...articleData,
+        title: data.title,
+        content: data.content,
+        slug,
+        status: data.status,
+        authorId: data.authorId,
         tags: {
-          connectOrCreate: tagNames.map(name => ({
+          connectOrCreate: data.tags.map(name => ({
             where: { name },
-            create: { name },
-          })),
-        },
+            create: { name }
+          }))
+        }
       },
       include: {
+        tags: true,
         author: {
           select: {
-            id: true,
-            name: true,
-          },
-        },
-        tags: true,
-      },
-    });
+            name: true
+          }
+        }
+      }
+    })
   }
 
   static async update(slug: string, data: {
-    title?: string;
-    content?: string;
-    tags?: string[];
-    status?: string;
+    title?: string
+    content?: string
+    status?: string
+    tags?: string[]
   }): Promise<ArticleWithRelations> {
-    const { tags: tagNames, ...updateData } = data;
+    const { tags, ...rest } = data
 
     return prisma.article.update({
       where: { slug },
       data: {
-        ...updateData,
-        ...(tagNames && {
+        ...rest,
+        ...(tags && {
           tags: {
             set: [],
-            connectOrCreate: tagNames.map(name => ({
+            connectOrCreate: tags.map(name => ({
               where: { name },
-              create: { name },
-            })),
-          },
-        }),
+              create: { name }
+            }))
+          }
+        })
       },
       include: {
+        tags: true,
         author: {
           select: {
-            id: true,
-            name: true,
-          },
-        },
-        tags: true,
-      },
-    });
+            name: true
+          }
+        }
+      }
+    })
   }
 
   static async delete(slug: string): Promise<void> {
     await prisma.article.delete({
-      where: { slug },
-    });
+      where: { slug }
+    })
   }
 } 

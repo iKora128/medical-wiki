@@ -5,6 +5,7 @@ import Footer from "@/components/Footer"
 import { TableOfContents } from "@/components/TableOfContents"
 import { Clock, ThumbsUp, ThumbsDown, Share2 } from "lucide-react"
 import Link from "next/link";
+import BookmarkButton from '@/components/BookmarkButton'
 
 export default function Hypertension() {
   return (
@@ -16,6 +17,9 @@ export default function Hypertension() {
             <h1 className="text-4xl font-bold text-gray-900 mb-6 relative first-letter:text-5xl first-letter:text-blue-600 first-letter:font-extrabold after:content-[''] after:block after:h-1 after:bg-gradient-to-r after:from-blue-500 after:to-transparent after:mt-2">
               高血圧（ハイパーテンション）
             </h1>
+            <div className="flex items-center space-x-4">
+              <BookmarkButton slug="hypertension" initialIsBookmarked={false} />
+            </div>
             <div className="flex items-center space-x-4 text-sm text-gray-500 mb-4">
               <span className="flex items-center">
                 <Clock className="w-4 h-4 mr-1" />

@@ -1,15 +1,14 @@
-export interface Article {
+export type Article = {
   id: string;
   slug: string;
   title: string;
   content: string;
+  status: string;
+  authorId: string;
   createdAt: Date;
   updatedAt: Date;
-  likes: number;
-  dislikes: number;
+  references: string;
   tags: Tag[];
-  references: string[];
-  status: 'draft' | 'published' | 'archived';
 }
 
 export interface Tag {
