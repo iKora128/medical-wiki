@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import fetch from 'node-fetch'
 
-const API_KEY = process.env.API_KEY
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY
 const API_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 async function uploadArticle(filePath: string) {
@@ -34,7 +34,7 @@ async function uploadArticle(filePath: string) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`
+        'Authorization': `Bearer ${ADMIN_API_KEY}`
       },
       body: JSON.stringify(article)
     })

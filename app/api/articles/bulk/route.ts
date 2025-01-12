@@ -5,12 +5,12 @@ import Markdoc from '@markdoc/markdoc';
 const prisma = new PrismaClient();
 
 // 環境変数からAPIキーを取得
-const API_KEY = process.env.API_KEY;
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
 
 export async function POST(request: Request) {
   // Bearer認証の確認
   const authHeader = request.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== API_KEY) {
+  if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== ADMIN_API_KEY) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
