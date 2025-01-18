@@ -1,8 +1,6 @@
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAuth, verifyRole, ROLES } from '@/lib/auth';
 import { bulkUploadSchema, validateCsvFormat } from '@/lib/validations/bulk-upload';
 import { ArticleRepository } from '@/lib/repositories/article';
 import { parse } from 'papaparse';
@@ -11,14 +9,12 @@ import { revalidatePath } from 'next/cache';
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session')?.value;
-    const user = await verifyAuth(sessionCookie);
+    // API Keyでの認証
+    const authHeader = request.headers.get('Authorization');
+    const apiKey = authHeader?.replace('Bearer ', '');
     
-    try {
-      await verifyRole(user, ROLES.ADMIN);
-    } catch (error) {
-      return NextResponse.json({ error: "管理者権限が必要です" }, { status: 403 });
+    if (!apiKey || apiKey !== process.env.ADMIN_API_KEY) {
+      return NextResponse.json({ error: "不正なAPIキーです" }, { status: 401 });
     }
 
     const formData = await request.formData();
@@ -68,8 +64,7 @@ export async function POST(request: Request) {
           title: articleData.title,
           content: html,
           tags: articleData.tags || [],
-          status: articleData.status,
-          authorId: user.uid
+          status: articleData.status
         });
 
         // 作成された記事ページを再生成

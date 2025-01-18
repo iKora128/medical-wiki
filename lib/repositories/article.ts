@@ -7,7 +7,7 @@ export type ArticleWithRelations = Article & {
   tags: Tag[]
   author: {
     name: string | null
-  }
+  } | null
   _count?: {
     bookmarks: number
   }
@@ -79,7 +79,7 @@ export class ArticleRepository {
     content: string
     slug?: string
     status: string
-    authorId: string
+    authorId?: string | null
     tags: string[]
   }): Promise<ArticleWithRelations> {
     const slug = data.slug || generateSlug(data.title)
@@ -90,7 +90,7 @@ export class ArticleRepository {
         content: data.content,
         slug,
         status: data.status,
-        authorId: data.authorId,
+        authorId: data.authorId || null,
         tags: {
           connectOrCreate: data.tags.map(name => ({
             where: { name },

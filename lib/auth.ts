@@ -71,4 +71,20 @@ export function handleAuthError(error: unknown) {
     )
   }
   throw error
+}
+
+export async function verifySystemUser(req: Request) {
+  const authHeader = req.headers.get("authorization")
+  if (!authHeader?.startsWith("Bearer ")) {
+    return { isValid: false }
+  }
+
+  const token = authHeader.split(" ")[1]
+  const systemToken = process.env.SYSTEM_API_TOKEN
+
+  if (!systemToken || token !== systemToken) {
+    return { isValid: false }
+  }
+
+  return { isValid: true }
 } 

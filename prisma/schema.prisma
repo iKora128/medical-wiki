@@ -19,8 +19,8 @@ model Article {
   updatedAt   DateTime  @updatedAt
   references  String    @default("[]")
   status      String    @default("draft")
-  author      User      @relation(fields: [authorId], references: [id])
-  authorId    String
+  author      User?     @relation(fields: [authorId], references: [id])
+  authorId    String?
   comments    Comment[]
   bookmarks   Bookmark[]
   tags        Tag[]
@@ -46,6 +46,7 @@ model User {
   bookmarks Bookmark[]
   questions Question[]
   answers   Answer[]
+  quizAnswers QuizAnswer[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 }
@@ -116,4 +117,32 @@ model Answer {
 
   @@index([userId])
   @@index([questionId])
+}
+
+model Quiz {
+  id          String      @id @default(cuid())
+  question    String
+  options     String[]
+  answer      String
+  explanation String
+  isActive    Boolean     @default(false)
+  lastShown   DateTime?
+  answers     QuizAnswer[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model QuizAnswer {
+  id        String   @id @default(cuid())
+  userId    String
+  quizId    String
+  answer    String
+  isCorrect Boolean
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id])
+  quiz      Quiz     @relation(fields: [quizId], references: [id])
+
+  @@index([userId])
+  @@index([quizId])
 } 

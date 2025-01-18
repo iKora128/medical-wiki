@@ -1,8 +1,5 @@
-"use client"
-
-import { useEffect, useState } from 'react';
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { TableOfContents } from "@/components/TableOfContents";
 import BookmarkButton from "@/components/BookmarkButton";
 import { prisma } from "@/lib/prisma";
@@ -12,83 +9,78 @@ import { adminAuth } from "@/lib/firebase-admin";
 interface ArticleData {
   title: string;
   content: string;
-  updatedAt: string;
-  tags: { name: string }[];
+  tags: Array<{ id: string; name: string }>;
+  isBookmarked: boolean;
 }
 
-interface Comment {
-  id: string;
-  content: string;
-  createdAt: string;
-  author: {
-    name: string | null;
-  };
-}
+export default async function ArticlePage({
+  params,
+}: {
+  params: { term: string };
+}) {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("session")?.value;
 
-export default async function Term({ params }: { params: { term: string } }) {
-  let userId = null
-  try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('session')?.value
-    if (sessionCookie) {
-      const decodedToken = await adminAuth.verifySessionCookie(sessionCookie)
-      userId = decodedToken.uid
+  let userId: string | null = null;
+  if (sessionCookie) {
+    try {
+      const decodedClaim = await adminAuth.verifySessionCookie(sessionCookie);
+      userId = decodedClaim.uid;
+    } catch (error) {
+      console.error("Error verifying session cookie:", error);
     }
-  } catch (error) {
-    console.error('Error verifying session:', error)
   }
 
   const article = await prisma.article.findUnique({
     where: { slug: params.term },
     include: {
-      author: true,
       tags: true,
-      bookmarks: userId ? {
-        where: { userId }
-      } : false
-    }
-  })
+      bookmarks: {
+        where: { userId: userId || "" },
+      },
+    },
+  });
 
   if (!article) {
-    return <div>記事が見つかりません</div>
+    notFound();
   }
 
-  const isBookmarked = userId ? article.bookmarks.length > 0 : false
+  const articleData: ArticleData = {
+    title: article.title,
+    content: article.content,
+    tags: article.tags,
+    isBookmarked: article.bookmarks.length > 0,
+  };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <article className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold mb-8">{article.title}</h1>
-          
-          <div className="flex gap-2 mb-6">
-            <BookmarkButton
-              slug={article.slug}
-              initialIsBookmarked={isBookmarked}
-            />
-          </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-start mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">{articleData.title}</h1>
+          <BookmarkButton
+            slug={params.term}
+            initialIsBookmarked={articleData.isBookmarked}
+          />
+        </div>
 
-          <div className="flex gap-2 mb-4">
-            {article.tags.map(tag => (
-              <span
-                key={tag.id}
-                className="px-2 py-1 bg-gray-100 text-sm rounded-md"
-              >
-                {tag.name}
-              </span>
-            ))}
-          </div>
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="prose max-w-none"
+            dangerouslySetInnerHTML={{ __html: articleData.content }}
+          />
+        </div>
 
-          <div className="prose max-w-none">
-            {article.content}
-          </div>
-          
-          <TableOfContents />
-        </article>
-      </main>
-      <Footer />
+        <div className="mt-4 flex flex-wrap gap-2">
+          {articleData.tags.map((tag) => (
+            <span
+              key={tag.id}
+              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+            >
+              {tag.name}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
-  )
+  );
 }
 

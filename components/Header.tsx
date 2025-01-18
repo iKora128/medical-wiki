@@ -1,66 +1,61 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
-import { Button } from "./ui/button"
+import { Button } from "@/components/ui/button"
+import AuthModal from "@/components/common/AuthModal"
 
 export default function Header() {
-  const { user, isAuthenticated, login, logout } = useAuth()
+  const { user, isAuthenticated, logout } = useAuth()
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
   return (
-    <header className="bg-white shadow">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <Link href="/" className="text-xl font-bold text-gray-900">
-              Medical Wiki
-            </Link>
-            <nav className="ml-8">
-              <div className="flex space-x-4">
-                <Link
-                  href="/articles"
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2"
-                >
-                  記事一覧
+    <>
+      <header className="border-b">
+        <div className="container mx-auto px-4">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-6">
+              <Link href="/" className="text-xl font-bold">
+                Medical Wiki
+              </Link>
+              <nav className="flex items-center gap-4">
+                <Link href="/search" className="text-gray-600 hover:text-gray-900">
+                  記事検索
                 </Link>
-                <Link
-                  href="/questions"
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2"
-                >
-                  質問一覧
+                <Link href="/quiz" className="text-gray-600 hover:text-gray-900">
+                  クイズ
                 </Link>
-                {isAuthenticated && (
-                  <Link
-                    href="/bookmarks"
-                    className="text-gray-700 hover:text-gray-900 px-3 py-2"
-                  >
-                    ブックマーク
-                  </Link>
-                )}
-              </div>
-            </nav>
-          </div>
+              </nav>
+            </div>
 
-          <div className="flex items-center">
-            {isAuthenticated ? (
-              <div className="flex items-center space-x-4">
-                <Link
-                  href="/profile"
-                  className="text-gray-700 hover:text-gray-900"
-                >
-                  {user?.name || "プロフィール"}
-                </Link>
-                <Button variant="outline" onClick={logout}>
-                  ログアウト
+            <div className="flex items-center gap-4">
+              {isAuthenticated ? (
+                <>
+                  {user?.role === "ADMIN" && (
+                    <Link href="/admin">
+                      <Button variant="outline">管理画面</Button>
+                    </Link>
+                  )}
+                  <Button variant="ghost" onClick={logout}>
+                    ログアウト
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" onClick={() => setShowAuthModal(true)}>
+                  ログイン
                 </Button>
-              </div>
-            ) : (
-              <Button onClick={login}>ログイン</Button>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
+    </>
   )
 }
 
