@@ -1,14 +1,25 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
-import AuthModal from "@/components/common/AuthModal"
+import AuthGuardModal from "@/components/common/AuthGuardModal"
 
 export default function Header() {
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, loading, signOut } = useAuth()
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    if (user) {
+      user.getIdTokenResult().then(token => {
+        setIsAdmin(token.claims.role === "ADMIN")
+      })
+    } else {
+      setIsAdmin(false)
+    }
+  }, [user])
 
   return (
     <>
@@ -30,14 +41,16 @@ export default function Header() {
             </div>
 
             <div className="flex items-center gap-4">
-              {isAuthenticated ? (
+              {loading ? (
+                <div>Loading...</div>
+              ) : user ? (
                 <>
-                  {user?.role === "ADMIN" && (
+                  {isAdmin && (
                     <Link href="/admin">
                       <Button variant="outline">管理画面</Button>
                     </Link>
                   )}
-                  <Button variant="ghost" onClick={logout}>
+                  <Button variant="ghost" onClick={signOut}>
                     ログアウト
                   </Button>
                 </>
@@ -51,7 +64,7 @@ export default function Header() {
         </div>
       </header>
 
-      <AuthModal
+      <AuthGuardModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
       />

@@ -125,7 +125,6 @@ model Quiz {
   options     String[]
   answer      String
   explanation String
-  isActive    Boolean     @default(false)
   lastShown   DateTime?
   answers     QuizAnswer[]
   createdAt   DateTime    @default(now())

@@ -3,7 +3,7 @@
 import Header from "@/components/Header"
 import Footer from "@/components/Footer"
 import { TableOfContents } from "@/components/TableOfContents"
-import { Clock, ThumbsUp, ThumbsDown, Share2 } from "lucide-react"
+import { Clock, Share2 } from "lucide-react"
 import Link from "next/link";
 import BookmarkButton from '@/components/BookmarkButton'
 
@@ -24,14 +24,6 @@ export default function Hypertension() {
               <span className="flex items-center">
                 <Clock className="w-4 h-4 mr-1" />
                 最終更新: 2023年6月15日
-              </span>
-              <span className="flex items-center">
-                <ThumbsUp className="w-4 h-4 mr-1" />
-                <span id="likes">42</span>
-              </span>
-              <span className="flex items-center">
-                <ThumbsDown className="w-4 h-4 mr-1" />
-                <span id="dislikes">5</span>
               </span>
               <button onClick={() => alert("共有機能は現在開発中です。")} className="flex items-center">
                 <Share2 className="w-4 h-4 mr-1" />

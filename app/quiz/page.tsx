@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuth } from "@/contexts/AuthContext"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Header from "@/components/Header"
@@ -24,18 +24,22 @@ type QuizHistory = {
 }
 
 export default function QuizPage() {
-  const { isAuthenticated } = useAuth()
+  const { user, loading } = useAuth()
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [isAnswered, setIsAnswered] = useState(false)
   const [history, setHistory] = useState<QuizHistory[]>([])
 
   useEffect(() => {
+    if (!loading && !user) {
+      // ログインが必要な処理
+      return
+    }
     fetchQuiz()
-    if (isAuthenticated) {
+    if (user) {
       fetchHistory()
     }
-  }, [isAuthenticated])
+  }, [user, loading])
 
   const fetchQuiz = async () => {
     try {
@@ -79,7 +83,7 @@ export default function QuizPage() {
         }),
       })
 
-      if (response.ok && isAuthenticated) {
+      if (response.ok && user) {
         fetchHistory()
       }
     } catch (error) {
@@ -129,7 +133,7 @@ export default function QuizPage() {
             </p>
           )}
 
-          {isAuthenticated && history.length > 0 && (
+          {user && history.length > 0 && (
             <div className="mt-8">
               <h2 className="text-xl font-semibold mb-4">回答履歴</h2>
               <div className="space-y-4">

@@ -4,19 +4,19 @@ import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { AuthModal as LoginModal } from "@/components/auth/AuthModal";
 import { useState } from "react";
 
-interface AuthModalProps {
+interface AuthGuardModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
   message?: string;
 }
 
-export default function AuthModal({
+export default function AuthGuardModal({
   isOpen,
   onClose,
   title = "ログインが必要です",
   message = "この機能を使用するにはログインが必要です。",
-}: AuthModalProps) {
+}: AuthGuardModalProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const handleLoginClick = () => {

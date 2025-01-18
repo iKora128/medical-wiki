@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useAuth } from "@/hooks/useAuth"
-import AuthModal from "@/components/common/AuthModal"
+import { useAuth } from "@/contexts/AuthContext"
+import AuthGuardModal from "@/components/common/AuthGuardModal"
 
 interface Profile {
   id: string
@@ -19,11 +19,17 @@ interface Profile {
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user, isAuthenticated } = useAuth()
+  const { user, loading } = useAuth()
+  const [showAuthModal, setShowAuthModal] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showAuthModal, setShowAuthModal] = useState(false)
+
+  useEffect(() => {
+    if (!loading && !user) {
+      setShowAuthModal(true)
+    }
+  }, [loading, user])
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -42,15 +48,15 @@ export default function ProfilePage() {
   }, [])
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (user) {
       fetchProfile()
     }
-  }, [isAuthenticated, fetchProfile])
+  }, [user, fetchProfile])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    if (!isAuthenticated) {
+    if (!user) {
       setShowAuthModal(true)
       return
     }
@@ -89,7 +95,7 @@ export default function ProfilePage() {
     }
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
@@ -184,7 +190,7 @@ export default function ProfilePage() {
           </div>
         </form>
 
-        <AuthModal
+        <AuthGuardModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
           title="ログインが必要です"

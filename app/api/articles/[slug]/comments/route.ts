@@ -1,111 +1,77 @@
 import { prisma } from "@/lib/prisma"
-import { NextResponse } from "next/server"
+import { withErrorHandling } from '@/lib/api-middleware'
+import { successResponse, errorResponse } from '@/lib/api-response'
 import { getServerSession } from "next-auth"
+import { z } from 'zod'
 
-export async function GET(
-  request: Request,
-  { params }: { params: { slug: string } }
-) {
-  try {
-    const article = await prisma.article.findUnique({
-      where: { slug: params.slug },
-      include: {
-        comments: {
-          include: {
-            author: {
-              select: {
-                name: true,
-              },
+const commentSchema = z.object({
+  content: z.string().min(1, 'コメント内容は必須です')
+})
+
+export const GET = withErrorHandling(async (request: Request, { params }: { params: { slug: string } }) => {
+  const article = await prisma.article.findUnique({
+    where: { slug: params.slug },
+    include: {
+      comments: {
+        include: {
+          author: {
+            select: {
+              name: true,
             },
           },
-          orderBy: {
-            createdAt: "desc",
-          },
+        },
+        orderBy: {
+          createdAt: "desc",
         },
       },
-    })
+    },
+  })
 
-    if (!article) {
-      return NextResponse.json(
-        { error: "記事が見つかりませんでした" },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json(article.comments)
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json(
-      { error: "コメントの取得に失敗しました" },
-      { status: 500 }
-    )
+  if (!article) {
+    return errorResponse("記事が見つかりませんでした", 404)
   }
-}
 
-export async function POST(
-  request: Request,
-  { params }: { params: { slug: string } }
-) {
-  try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "ログインが必要です" },
-        { status: 401 }
-      )
-    }
+  return successResponse(article.comments)
+})
 
-    const { content } = await request.json()
-    if (!content?.trim()) {
-      return NextResponse.json(
-        { error: "コメント内容は必須です" },
-        { status: 400 }
-      )
-    }
+export const POST = withErrorHandling(async (request: Request, { params }: { params: { slug: string } }) => {
+  const session = await getServerSession()
+  if (!session?.user?.email) {
+    return errorResponse("ログインが必要です", 401)
+  }
 
-    const article = await prisma.article.findUnique({
-      where: { slug: params.slug },
-    })
+  const data = commentSchema.parse(await request.json())
 
-    if (!article) {
-      return NextResponse.json(
-        { error: "記事が見つかりませんでした" },
-        { status: 404 }
-      )
-    }
+  const article = await prisma.article.findUnique({
+    where: { slug: params.slug },
+  })
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    })
+  if (!article) {
+    return errorResponse("記事が見つかりませんでした", 404)
+  }
 
-    if (!user) {
-      return NextResponse.json(
-        { error: "ユーザーが見つかりませんでした" },
-        { status: 404 }
-      )
-    }
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  })
 
-    const comment = await prisma.comment.create({
-      data: {
-        content,
-        articleId: article.id,
-        authorId: user.id,
-      },
-      include: {
-        author: {
-          select: {
-            name: true,
-          },
+  if (!user) {
+    return errorResponse("ユーザーが見つかりませんでした", 404)
+  }
+
+  const comment = await prisma.comment.create({
+    data: {
+      content: data.content,
+      articleId: article.id,
+      authorId: user.id,
+    },
+    include: {
+      author: {
+        select: {
+          name: true,
         },
       },
-    })
+    },
+  })
 
-    return NextResponse.json(comment)
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json(
-      { error: "コメントの投稿に失敗しました" },
-      { status: 500 }
-    )
-  }
-} 
+  return successResponse(comment, 'コメントを投稿しました')
+}) 

@@ -6,6 +6,7 @@ export type ApiResponse<T = any> = {
   message?: string;
   data?: T;
   code?: string;
+  details?: any;
 };
 
 export function successResponse<T>(data: T, message?: string): NextResponse<ApiResponse<T>> {
@@ -19,13 +20,13 @@ export function successResponse<T>(data: T, message?: string): NextResponse<ApiR
 export function errorResponse(
   message: string,
   status: number = 400,
-  code?: string
+  details?: any
 ): NextResponse<ApiResponse> {
   return NextResponse.json(
     {
       success: false,
       message,
-      code,
+      details,
     },
     { status }
   );
@@ -33,7 +34,7 @@ export function errorResponse(
 
 export function handleZodError(error: ZodError): NextResponse<ApiResponse> {
   const message = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
-  return errorResponse(message, 400, 'VALIDATION_ERROR');
+  return errorResponse(message, 400, { errors: error.errors });
 }
 
 export const HTTP_STATUS = {

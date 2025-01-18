@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { BsBookmark, BsBookmarkFill } from 'react-icons/bs'
-import AuthModal from './common/AuthModal'
+import AuthGuardModal from './common/AuthGuardModal'
 
 interface BookmarkButtonProps {
   slug: string
@@ -62,7 +62,7 @@ export default function BookmarkButton({ slug, initialIsBookmarked }: BookmarkBu
         )}
       </button>
 
-      <AuthModal
+      <AuthGuardModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         title="ブックマークするにはログインが必要です"

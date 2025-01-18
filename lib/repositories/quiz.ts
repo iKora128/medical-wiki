@@ -10,7 +10,6 @@ export const QuizRepository = {
     return await prisma.quiz.create({
       data: {
         ...data,
-        isActive: false,
       },
     })
   },
@@ -24,7 +23,6 @@ export const QuizRepository = {
     return await prisma.quiz.createMany({
       data: data.map((quiz) => ({
         ...quiz,
-        isActive: false,
       })),
     })
   },

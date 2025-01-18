@@ -40,3 +40,7 @@ med-wiki-e7f3c-firebase-adminsdk-*.json
 .env
 .env.local
 .env.*.local
+
+# Database
+/prisma/dev.db
+/prisma/dev.db-journal
