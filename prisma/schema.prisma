@@ -19,11 +19,9 @@ model Article {
   updatedAt   DateTime  @updatedAt
   references  String    @default("[]")
   status      String    @default("draft")
-  author      User?     @relation(fields: [authorId], references: [id])
-  authorId    String?
-  comments    Comment[]
-  bookmarks   Bookmark[]
   tags        Tag[]
+  bookmarks   Bookmark[]
+  comments    Comment[]
 }
 
 model Tag {
@@ -41,7 +39,6 @@ model User {
   email     String     @unique
   role      String     @default("USER")
   profile   Profile?
-  articles  Article[]
   comments  Comment[]
   bookmarks Bookmark[]
   questions Question[]

@@ -37,31 +37,65 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authInitialized, setAuthInitialized] = useState(false)
   const auth = getAuth(app)
 
   useEffect(() => {
+    const auth = getAuth(app)
+    
+    // Firebase Auth の初期化を待つ
+    const waitForAuth = async () => {
+      return new Promise<void>((resolve) => {
+        const unsubscribe = auth.onAuthStateChanged(() => {
+          unsubscribe()
+          resolve()
+        })
+      })
+    }
+
+    // 初期化処理
+    const initializeAuth = async () => {
+      await waitForAuth()
+      setAuthInitialized(true)
+    }
+
+    initializeAuth()
+  }, [])
+
+  useEffect(() => {
+    if (!authInitialized) return
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user)
       setLoading(false)
     })
 
     return () => unsubscribe()
-  }, [auth])
+  }, [auth, authInitialized])
 
   const getIdToken = async () => {
     try {
-      return user ? await user.getIdToken() : null
+      return user ? await user.getIdToken(true) : null
     } catch (error) {
       console.error("Error getting ID token:", error)
       return null
     }
   }
 
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth)
+      setUser(null)
+    } catch (error) {
+      console.error("Error signing out:", error)
+    }
+  }
+
   const value = {
     user,
-    loading,
+    loading: loading || !authInitialized,
     getIdToken,
-    signOut: () => signOut(auth),
+    signOut: handleSignOut,
     signInWithGoogle: () => {
       const provider = new GoogleAuthProvider()
       return signInWithPopup(auth, provider)

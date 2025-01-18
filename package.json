@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "upload-article": "ts-node scripts/upload-article.ts"
+    "upload-article": "NODE_OPTIONS='--loader ts-node/esm' ts-node scripts/upload-article.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
@@ -25,6 +25,7 @@
     "crypto-browserify": "^3.12.1",
     "csv-parse": "^5.6.0",
     "date-fns": "^4.1.0",
+    "dotenv": "^16.4.7",
     "events": "^3.3.0",
     "firebase": "^11.1.0",
     "firebase-admin": "^13.0.2",
@@ -57,11 +58,11 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.15",
+    "@types/glob": "^8.1.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/react-scroll": "^1.8.10",
-    "@types/glob": "^8.1.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.16",
     "glob": "^10.3.10",

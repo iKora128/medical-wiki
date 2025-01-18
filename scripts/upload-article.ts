@@ -1,8 +1,9 @@
+import 'dotenv/config'
 import fs from 'fs'
 import path from 'path'
 import fetch from 'node-fetch'
 import matter from 'gray-matter'
-import glob from 'glob'
+import { glob } from 'glob'
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY
 const API_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -17,18 +18,33 @@ interface ArticleMetadata {
   tags?: string[];
   status?: 'draft' | 'published';
   slug?: string;
+  references?: string[];
 }
 
-async function uploadArticles(inputPath: string) {
+// 記事の存在チェック
+async function checkArticleExists(slug: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_URL}/api/articles/${slug}`, {
+      headers: {
+        'Authorization': `Bearer ${ADMIN_API_KEY}`
+      }
+    })
+    return response.ok
+  } catch (error) {
+    return false
+  }
+}
+
+async function uploadArticles(inputPath: string, force: boolean = false) {
   try {
     const stats = fs.statSync(inputPath)
     
     if (stats.isDirectory()) {
-      await uploadDirectory(inputPath)
+      await uploadDirectory(inputPath, force)
     } else if (stats.isFile()) {
       const extension = path.extname(inputPath).toLowerCase()
       if (extension === '.md') {
-        await uploadMarkdown(inputPath)
+        await uploadMarkdown(inputPath, force)
       } else {
         throw new Error('サポートされていないファイル形式です。.md ファイルを指定してください。')
       }
@@ -39,10 +55,9 @@ async function uploadArticles(inputPath: string) {
   }
 }
 
-async function uploadDirectory(dirPath: string) {
+async function uploadDirectory(dirPath: string, force: boolean) {
   console.log(`ディレクトリ ${dirPath} から記事を検索中...`)
   
-  // .mdファイルを再帰的に検索
   const files = glob.sync('**/*.md', { cwd: dirPath })
   
   if (files.length === 0) {
@@ -54,22 +69,26 @@ async function uploadDirectory(dirPath: string) {
   
   for (const file of files) {
     const fullPath = path.join(dirPath, file)
-    await uploadMarkdown(fullPath)
+    try {
+      await uploadMarkdown(fullPath, force)
+    } catch (error) {
+      console.error(`エラー (${file}):`, error)
+      continue
+    }
   }
 }
 
-async function uploadMarkdown(filePath: string) {
+async function uploadMarkdown(filePath: string, force: boolean) {
   const fileContent = fs.readFileSync(filePath, 'utf-8')
   
-  // Front Matterの解析
   const { data, content } = matter(fileContent)
   const metadata = data as ArticleMetadata
   
-  // ファイル名からslugを生成（Front Matterで指定がない場合）
   const fileName = path.basename(filePath, '.md')
   const slug = metadata.slug || fileName
   
-  // Front Matterからタイトルを取得、なければ1行目から抽出
+  const exists = await checkArticleExists(slug)
+  
   let title = metadata.title
   if (!title) {
     const titleMatch = content.match(/^# (.+)$/m)
@@ -80,40 +99,73 @@ async function uploadMarkdown(filePath: string) {
     title,
     slug,
     content,
-    tags: metadata.tags || [path.basename(path.dirname(filePath))], // タグ未指定時はディレクトリ名をタグとして使用
-    status: metadata.status || 'draft'
+    tags: metadata.tags || [],
+    status: metadata.status || 'draft',
+    references: metadata.references || []
   }
 
-  console.log('記事をアップロードしています...')
+  // forceフラグに関係なく、存在チェックに基づいてメソッドを決定
+  const method = exists ? 'PUT' : 'POST'
+  const endpoint = exists ? `${API_URL}/api/articles/${slug}` : `${API_URL}/api/articles`
+
+  console.log(`記事を${exists ? '更新' : 'アップロード'}しています...`)
   console.log('タイトル:', title)
   console.log('スラッグ:', slug)
   console.log('タグ:', article.tags.join(', '))
   console.log('ステータス:', article.status)
 
-  const response = await fetch(`${API_URL}/api/articles`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${ADMIN_API_KEY}`
-    },
-    body: JSON.stringify(article)
-  })
+  try {
+    const response = await fetch(endpoint, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ADMIN_API_KEY}`
+      },
+      body: JSON.stringify(article)
+    })
 
-  if (!response.ok) {
-    const error = await response.json() as { message?: string }
-    throw new Error(`アップロード失敗: ${error.message || response.statusText}`)
+    if (!response.ok) {
+      const text = await response.text()
+      let error
+      try {
+        error = JSON.parse(text)
+      } catch {
+        error = { message: text || response.statusText }
+      }
+      throw new Error(`${exists ? '更新' : 'アップロード'}失敗: ${error.message || response.statusText}`)
+    }
+
+    const text = await response.text()
+    if (!text) {
+      console.log(`${exists ? '更新' : 'アップロード'}成功（レスポンスなし）`)
+      return
+    }
+
+    try {
+      const result = JSON.parse(text)
+      console.log(`${exists ? '更新' : 'アップロード'}成功:`, result)
+    } catch (e) {
+      console.log(`${exists ? '更新' : 'アップロード'}成功（JSONパースエラー）:`, text)
+    }
+  } catch (error) {
+    console.error('エラー:', error)
+    throw error
+  } finally {
+    console.log('---')
   }
-
-  const result = await response.json()
-  console.log('アップロード成功:', result)
-  console.log('---')
 }
 
-// コマンドライン引数からパスを取得
-const inputPath = process.argv[2]
+// コマンドライン引数の解析
+const args = process.argv.slice(2)
+const force = args.includes('--force')
+const inputPath = args.filter(arg => arg !== '--force')[0]
+
 if (!inputPath) {
-  console.error('使用方法: ts-node upload-article.ts <Markdownファイルまたはディレクトリのパス>')
+  console.error(`使用方法: 
+  npm run upload-article <Markdownファイルまたはディレクトリのパス>
+  npm run upload-article --force <Markdownファイルまたはディレクトリのパス>  # 既存の記事を上書き
+  `)
   process.exit(1)
 }
 
-uploadArticles(inputPath) 
+uploadArticles(inputPath, force)

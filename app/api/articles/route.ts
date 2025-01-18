@@ -4,15 +4,14 @@ import { prisma } from '@/lib/prisma';
 import { withErrorHandling } from '@/lib/api-middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { articleSchema } from '@/lib/validations/article';
-import { verifyAuth, verifyRole, ROLES } from '@/lib/auth';
-import { headers } from 'next/headers';
 
 export const POST = withErrorHandling(async (request: Request) => {
-  const headersList = headers();
-  const cookie = request.headers.get('cookie');
-  const sessionCookie = cookie?.split(';').find((c: string) => c.trim().startsWith('session='))?.split('=')[1];
-  const user = await verifyAuth(sessionCookie);
-  await verifyRole(user, ROLES.ADMIN);
+  const authHeader = request.headers.get('Authorization');
+  const adminApiKey = process.env.ADMIN_API_KEY;
+
+  if (authHeader !== `Bearer ${adminApiKey}`) {
+    return errorResponse('認証に失敗しました', 401);
+  }
 
   const json = await request.json();
   const validatedData = articleSchema.parse(json);
@@ -20,8 +19,7 @@ export const POST = withErrorHandling(async (request: Request) => {
   const article = await prisma.article.create({
     data: {
       ...validatedData,
-      references: JSON.stringify(validatedData.references),
-      authorId: user.uid,
+      references: JSON.stringify(validatedData.references || []),
       tags: {
         connectOrCreate: validatedData.tags.map((tag) => ({
           where: { name: tag },
@@ -31,11 +29,6 @@ export const POST = withErrorHandling(async (request: Request) => {
     },
     include: {
       tags: true,
-      author: {
-        select: {
-          name: true,
-        },
-      },
     },
   });
 

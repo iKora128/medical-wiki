@@ -2,17 +2,19 @@ import { prisma } from '@/lib/prisma';
 import { withErrorHandling } from '@/lib/api-middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { z } from 'zod';
-import { verifyAuth, verifyRole, ROLES } from '@/lib/auth';
 
 const articleUpdateSchema = z.object({
   title: z.string(),
   content: z.string(),
-  tags: z.array(z.string())
+  tags: z.array(z.string()),
+  status: z.enum(['draft', 'published']).optional(),
+  references: z.array(z.string()).optional(),
 });
 
 export const GET = withErrorHandling(async (request: Request, { params }: { params: { slug: string } }) => {
+  const { slug } = await params
   const article = await prisma.article.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: {
       tags: true,
     },
@@ -26,26 +28,23 @@ export const GET = withErrorHandling(async (request: Request, { params }: { para
 });
 
 export const PUT = withErrorHandling(async (request: Request, { params }: { params: { slug: string } }) => {
-  // 認証チェック
   const authHeader = request.headers.get('Authorization');
   const apiKey = authHeader?.replace('Bearer ', '');
   
-  // 管理者APIキーでの認証
-  if (apiKey === process.env.ADMIN_API_KEY) {
-    // APIキーが一致する場合は処理を続行
-  } else {
-    // Firebase認証のチェック
-    const user = await verifyAuth(request);
-    await verifyRole(user, ROLES.ADMIN);
+  if (apiKey !== process.env.ADMIN_API_KEY) {
+    return errorResponse('認証に失敗しました', 401);
   }
 
+  const { slug } = await params
   const data = articleUpdateSchema.parse(await request.json());
   
   const article = await prisma.article.update({
-    where: { slug: params.slug },
+    where: { slug },
     data: {
       title: data.title,
       content: data.content,
+      status: data.status,
+      references: data.references ? JSON.stringify(data.references) : undefined,
       tags: {
         set: [],
         connectOrCreate: data.tags.map((tag) => ({

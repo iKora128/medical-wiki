@@ -1,17 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      "http2": false,
-      "http": false,
-      "https": false,
-      "url": false,
-      "events": false,
-      "fs": false,
-      "net": false,
-      "tls": false,
-      "child_process": false,
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['localhost:3000']
+    }
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals.push({
+        'pino-pretty': 'commonjs pino-pretty',
+      })
     }
     return config
   },

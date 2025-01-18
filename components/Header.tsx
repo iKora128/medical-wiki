@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import AuthGuardModal from "@/components/common/AuthGuardModal"
 
 export default function Header() {
-  const { user, loading, signOut } = useAuth()
+  const { user, signOut } = useAuth()
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -41,9 +41,7 @@ export default function Header() {
             </div>
 
             <div className="flex items-center gap-4">
-              {loading ? (
-                <div>Loading...</div>
-              ) : user ? (
+              {user ? (
                 <>
                   {isAdmin && (
                     <Link href="/admin">
